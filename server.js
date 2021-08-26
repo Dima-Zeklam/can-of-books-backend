@@ -3,36 +3,35 @@ const express = require('express');
 require('dotenv').config();
 const cors = require('cors');
 const axios = require('axios');
-const mongoose = require('mongoose');
-
 const PORT = process.env.PORT;
 const server = express();
 server.use(cors());
-
+const mongoose = require('mongoose');
 // Middleware (to parse the request body)
 server.use(express.json());
+const bookModel = require('./Modules/Model');//Model
+const BookSchema = require('./Modules/Schema')//Schema
 
-const mongoLink = process.env.mongo_link;
-mongoose.connect(mongoLink, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(`${process.env.mongo_link}`, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+// const mongoLink = process.env.mongo_link;
+
+
 
 //server
 server.get('/', listenerHandl);
 server.get('/books', getbook);
 server.post('/addBook', addBookHandler);
 server.delete('/deleteBook/:bookID', deleteBookHandler);
-// server.delete('/ubdateBook/:bookID', updateCatHandler);
+server.put('/ubdateBook/:bookID', updatebookHandler);
 
 
-//Schema
-const BookSchema = new mongoose.Schema({
-    title: String,
-    description: String,
-    status: String,
-    email: String
-});
 
-//Model
-const bookModel = mongoose.model('books', BookSchema);
+
+
+
 
 //----------------- seedDataCollection ---------------------------
 function seedDataCollection() {
@@ -154,35 +153,27 @@ async function deleteBookHandler(req, res) {
 
 // --------------- updateCatHandler ---------------------
 
-// function updateCatHandler(req, res) {
-//     let { title,
-//         description,
-//         status,
-//         email } = req.body;
-
-//     let dataID = req.params.dataID;
-//     console.log(req.body);
-//     bookModel.findOne({ _id: catID }, (error, catInfo) => {
-//         console.log(catInfo)
-//         catInfo.ownerName = ownerName;
-//         catInfo.catName = catName;
-//         catInfo.catBreed = catBreed;
-//         console.log('aaaaaaaaaaaa', catInfo)
-//         catInfo.save()
-//             .then(() => {
-//                 kittenModel.find({ ownerName }, function (err, ownerData) {
-//                     if (err) {
-//                         console.log('error in getting the data')
-//                     } else {
-//                         // console.log(ownerData);
-//                         res.send(ownerData)
-//                     }
-//                 })
-//             }).catch(error => {
-//                 console.log('error in saving ')
-//             })
-//     })
-// }
+function updatebookHandler(req, res) {
+    let bookID = req.params.bookID;
+    let { title, description, status,email }=req.body;
+    console.log(req.body);
+    bookModel.findByIdAndUpdate(bookID, { title , description, status, email },(error,updatedData)=>{
+        if(error) {
+            console.log('error in updating the data')
+        } else {
+            console.log(updatedData,"Data updated!");
+            
+            bookModel.find({email: req.body.email},function(err,data){
+                if(err) {
+                    console.log('error in getting the data')
+                } else {
+                  console.log(data);
+                    res.send(data);
+                }
+            })
+        }
+    })
+}
 
 
 // localhost:3001/books?email=
