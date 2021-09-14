@@ -11,26 +11,57 @@ const mongoose = require('mongoose');
 server.use(express.json());
 const bookModel = require('./Modules/Model');//Model
 const BookSchema = require('./Modules/Schema')//Schema
+const ITbooksSchema = new mongoose.Schema({
+    title: String,
+    subtitle: String,
+    price: String,
+    image: String,
+    url: String,
+    email:String
+})
+const ITbookModel = mongoose.model("ItBooks", ITbooksSchema);
 
 mongoose.connect(`${process.env.mongo_link}`, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-  });
+});
 // const mongoLink = process.env.mongo_link;
 
 
 
 //server
 server.get('/', listenerHandl);
+server.get('/search', getApi);
 server.get('/books', getbook);
 server.post('/addBook', addBookHandler);
+server.post('/addITBook',addITBook);
+server.get('/getITbooks',getITbooks);
 server.delete('/deleteBook/:bookID', deleteBookHandler);
+server.delete('/deleteITBook/:ID', deleteITBook);
 server.put('/ubdateBook/:bookID', updatebookHandler);
 
+class ITbooks {
+    constructor(item) {
+        this.title = item.title,
+            this.subtitle = item.subtitle,
+            this.price = item.price,
+            this.image = item.image,
+            this.url = item.url
+    }
+}
 
-
-
-
+// https://api.itbook.store/1.0/search
+async function getApi(req, res) {
+    let Bookname = req.query.Bookname;
+    let URL = `https://api.itbook.store/1.0/search/${Bookname}`;
+    let BookData = await axios.get(URL);
+    // console.log('BookData:', BookData.data);
+   let booksData =  BookData.data.books.map(item=>{
+       return new ITbooks(item);
+    })
+    // console.log('booksData::;;',booksData)
+    res.send(booksData);
+}
 
 
 //----------------- seedDataCollection ---------------------------
@@ -89,7 +120,7 @@ function getbook(req, res) {
         if (err) {
             console.log('error in getting the data')
         } else {
-            console.log(bookData);
+            // console.log(bookData);
             res.send(bookData);
         }
     })
@@ -117,11 +148,12 @@ async function addBookHandler(req, res) {
         if (err) {
             console.log('error in getting the data')
         } else {
-            console.log(bookData);
+            // console.log(bookData);
             res.send(bookData);
         }
     })
 }
+
 
 // --------------- deleteBookHandler ---------------------
 async function deleteBookHandler(req, res) {
@@ -138,7 +170,7 @@ async function deleteBookHandler(req, res) {
                     console.log('error in deleting the data ');
                 }
                 else {
-                    console.log('dima', data);
+                    // console.log('dima', data);
                     res.send(data);
 
                 }
@@ -155,27 +187,97 @@ async function deleteBookHandler(req, res) {
 
 function updatebookHandler(req, res) {
     let bookID = req.params.bookID;
-    let { title, description, status,email }=req.body;
+    let { title, description, status, email } = req.body;
     console.log(req.body);
-    bookModel.findByIdAndUpdate(bookID, { title , description, status, email },(error,updatedData)=>{
-        if(error) {
+    bookModel.findByIdAndUpdate(bookID, { title, description, status, email }, (error, updatedData) => {
+        if (error) {
             console.log('error in updating the data')
         } else {
-            console.log(updatedData,"Data updated!");
-            
-            bookModel.find({email: req.body.email},function(err,data){
-                if(err) {
+            console.log(updatedData, "Data updated!");
+
+            bookModel.find({ email: req.body.email }, function (err, data) {
+                if (err) {
                     console.log('error in getting the data')
                 } else {
-                  console.log(data);
+                    // console.log(data);
                     res.send(data);
                 }
             })
         }
     })
 }
+// --------------- addITBook ---------------------
+async function addITBook(req, res) {
+
+    let {
+        title,
+        subtitle,
+        price,
+        image,
+        url,
+        email } = req.body;
+
+    const AddITBook = new ITbookModel({
+        title: title,
+        subtitle: subtitle,
+        price: price,
+        image: image,
+        url: url,
+        email:email
+    })
+
+    await AddITBook.save();
+    ITbookModel.find({ email: email }, function (err, bookData) {
+        if (err) {
+            console.log('error in getting the data')
+        } else {
+            // console.log(bookData);
+            res.send(bookData);
+            // console.log('ITbookdata:::',bookData);
+        }
+    })
+    
+}
+
+// server.get('/getITbooks',getITbooks);
+async function getITbooks(req,res){
+let email = req.query.email;
+
+ITbookModel.find({ email: email }, function (err, bookData) {
+    if (err) {
+        console.log('error in getting the data')
+    } else {
+        console.log('get book It:',bookData);
+        res.send(bookData);
+    }
+})
+}
+// server.delete('/deleteITBook/:ID', deleteITBook);
+async function deleteITBook(req, res) {
+    let DataID = req.params.ID;
+    // console.log(email1);
+    ITbookModel.remove({ _id: DataID }, (error, bookData) => {
+        if (error) {
+            console.log('error in deleting the data ')
+        } else {
+            console.log(bookData);
+            ITbookModel.find({ }, function (err, data) {
+                if (err) {
+                    console.log('error in deleting the data ');
+                }
+                else {
+                    console.log('dima', data);
+                    res.send(data);
+
+                }
+
+            })
 
 
+        }
+    })
+
+}
 // localhost:3001/books?email=
 server.listen(PORT, () => {
     console.log('listening to port ', PORT);
